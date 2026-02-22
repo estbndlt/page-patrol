@@ -1,0 +1,112 @@
+{{define "coordinator"}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.AppName}} | Coordinator</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <strong>{{.AppName}} Coordinator</strong>
+      <span class="muted">{{displayName .User.DisplayName .User.Email}}</span>
+    </div>
+    <nav class="topnav">
+      <a href="/">Member view</a>
+      <a href="/coordinator/members">Allow list</a>
+      <form method="post" action="/auth/logout">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <button type="submit" class="secondary">Logout</button>
+      </form>
+    </nav>
+  </header>
+
+  <main class="container grid">
+    <section class="card">
+      <h2>Publish Weekly Target</h2>
+      <form method="post" action="/coordinator/targets" class="stack">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+        <label for="book_title">Book title</label>
+        <input id="book_title" name="book_title" required>
+
+        <label for="progress_mode">Progress type</label>
+        <select id="progress_mode" name="progress_mode" required>
+          <option value="chapters">Chapters</option>
+          <option value="pages">Pages</option>
+        </select>
+
+        <div class="row">
+          <div>
+            <label for="progress_start">From</label>
+            <input id="progress_start" name="progress_start" type="number" min="0" required>
+          </div>
+          <div>
+            <label for="progress_end">To</label>
+            <input id="progress_end" name="progress_end" type="number" min="0" required>
+          </div>
+        </div>
+
+        <label for="due_date">Due date</label>
+        <input id="due_date" name="due_date" type="date" required>
+
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" rows="3" placeholder="Optional details"></textarea>
+
+        <button type="submit">Publish target</button>
+      </form>
+
+      {{if .Target}}
+      <hr>
+      <h3>Current Active Target</h3>
+      <p><strong>{{.Target.BookTitle}}</strong></p>
+      <p>{{.Target.ProgressMode}} {{.Target.ProgressStart}} to {{.Target.ProgressEnd}}</p>
+      <p>Due {{formatDate .Target.DueDate}}</p>
+      {{end}}
+    </section>
+
+    <section class="card">
+      <h2>Weekly Completion Trends</h2>
+      <table>
+        <thead>
+          <tr><th>Book</th><th>Due</th><th>Readers</th><th>Completion</th></tr>
+        </thead>
+        <tbody>
+          {{range .WeeklyTrends}}
+          <tr>
+            <td>{{.BookTitle}}</td>
+            <td>{{formatDate .DueDate}}</td>
+            <td>{{.Readers}} / {{.TotalMembers}}</td>
+            <td>{{formatPct .CompletionRate}}%</td>
+          </tr>
+          {{else}}
+          <tr><td colspan="4" class="muted">No archived weeks yet.</td></tr>
+          {{end}}
+        </tbody>
+      </table>
+
+      <h2>Member Streaks</h2>
+      <table>
+        <thead>
+          <tr><th>Member</th><th>Streak</th></tr>
+        </thead>
+        <tbody>
+          {{range .MemberStreaks}}
+          <tr>
+            <td>{{displayName .DisplayName .Email}}</td>
+            <td>{{.Streak}}</td>
+          </tr>
+          {{else}}
+          <tr><td colspan="2" class="muted">No streak data yet.</td></tr>
+          {{end}}
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer class="footer">{{.AppName}} {{.NowYear}}</footer>
+</body>
+</html>
+{{end}}

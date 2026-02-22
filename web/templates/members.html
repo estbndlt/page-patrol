@@ -1,0 +1,81 @@
+{{define "members"}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.AppName}} | Allow List</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <strong>{{.AppName}} Allow List</strong>
+      <span class="muted">{{displayName .User.DisplayName .User.Email}}</span>
+    </div>
+    <nav class="topnav">
+      <a href="/">Member view</a>
+      <a href="/coordinator">Coordinator dashboard</a>
+      <form method="post" action="/auth/logout">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <button type="submit" class="secondary">Logout</button>
+      </form>
+    </nav>
+  </header>
+
+  <main class="container grid">
+    <section class="card">
+      <h2>Add or Reactivate Member</h2>
+      <form method="post" action="/coordinator/members" class="stack">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" required>
+
+        <label for="display_name">Display name (optional)</label>
+        <input id="display_name" name="display_name">
+
+        <button type="submit">Save member</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Current Allow List</h2>
+      <table>
+        <thead>
+          <tr><th>Email</th><th>Name</th><th>Status</th><th>Actions</th></tr>
+        </thead>
+        <tbody>
+          {{range .Invites}}
+          <tr>
+            <td>{{.Email}}</td>
+            <td>{{if .DisplayName}}{{.DisplayName}}{{else}}-{{end}}</td>
+            <td>
+              <span class="pill {{if .Active}}ok{{else}}off{{end}}">{{if .Active}}ACTIVE{{else}}INACTIVE{{end}}</span>
+            </td>
+            <td>
+              {{if .Active}}
+              <form method="post" action="/coordinator/members/{{.ID}}/deactivate" class="inline-form">
+                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                <button type="submit" class="danger">Deactivate</button>
+              </form>
+              {{else}}
+              <form method="post" action="/coordinator/members/{{.ID}}/reactivate" class="inline-form">
+                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                <button type="submit">Reactivate</button>
+              </form>
+              {{end}}
+            </td>
+          </tr>
+          {{else}}
+          <tr><td colspan="4" class="muted">No members yet.</td></tr>
+          {{end}}
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <footer class="footer">{{.AppName}} {{.NowYear}}</footer>
+</body>
+</html>
+{{end}}

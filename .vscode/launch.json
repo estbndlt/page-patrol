@@ -1,0 +1,11 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Web App (Docker Compose)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "docker compose -f ${workspaceFolder}/docker-compose.yml up --build"
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{{define "home"}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.AppName}} | Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <strong>{{.AppName}}</strong>
+      <span class="muted">Signed in as {{displayName .User.DisplayName .User.Email}}</span>
+    </div>
+    <nav class="topnav">
+      {{if .IsCoord}}<a href="/coordinator">Coordinator</a>{{end}}
+      <form method="post" action="/auth/logout">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <button type="submit" class="secondary">Logout</button>
+      </form>
+    </nav>
+  </header>
+
+  <main class="container grid">
+    <section class="card">
+      <h2>Weekly Target</h2>
+      {{if .Target}}
+        <p><strong>{{.Target.BookTitle}}</strong></p>
+        <p>{{.Target.ProgressMode}} {{.Target.ProgressStart}} to {{.Target.ProgressEnd}}</p>
+        <p>Due {{formatDate .Target.DueDate}}</p>
+        {{if .Target.Notes}}<p class="muted">{{.Target.Notes}}</p>{{end}}
+      {{else}}
+        <p class="muted">No active reading target yet.</p>
+      {{end}}
+
+      <div id="read-panel">
+        {{template "read_panel" .ReadPanel}}
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Activity Feed</h2>
+      <div id="feed-shell" hx-get="/feed/fragment" hx-trigger="every 30s" hx-swap="innerHTML">
+        {{template "feed_items" .Feed}}
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">{{.AppName}} {{.NowYear}}</footer>
+
+  <script>
+    (function () {
+      if (!window.EventSource) return;
+      const feedShell = document.getElementById("feed-shell");
+      if (!feedShell) return;
+      const stream = new EventSource("/feed/events");
+      stream.addEventListener("activity", function () {
+        if (window.htmx) {
+          window.htmx.ajax("GET", "/feed/fragment", {target: "#feed-shell", swap: "innerHTML"});
+        }
+      });
+      stream.onerror = function () {
+      };
+    })();
+  </script>
+</body>
+</html>
+{{end}}
+
+{{define "read_panel"}}
+{{if .HasTarget}}
+  <form method="post" action="/status/toggle" hx-post="/status/toggle" hx-target="#read-panel" hx-swap="innerHTML" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+    <button type="submit">{{if .IsRead}}Mark unread{{else}}I read!{{end}}</button>
+  </form>
+  <p class="muted">{{.ReadCount}} of {{.MemberCount}} members marked read.</p>
+  <ul class="list">
+    {{range .Members}}
+      <li>
+        <span>{{.Name}}</span>
+        <span class="pill {{if .IsRead}}ok{{else}}off{{end}}">{{if .IsRead}}READ{{else}}PENDING{{end}}</span>
+      </li>
+    {{end}}
+  </ul>
+{{else}}
+  <p class="muted">Coordinator has not published this week's target yet.</p>
+{{end}}
+{{end}}
+
+{{define "feed_items"}}
+<ul class="feed">
+  {{range .}}
+    <li>
+      <div>{{.Message}}</div>
+      <small class="muted">{{.When}}</small>
+    </li>
+  {{else}}
+    <li><span class="muted">No activity yet.</span></li>
+  {{end}}
+</ul>
+{{end}}
