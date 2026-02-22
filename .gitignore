@@ -1,0 +1,6 @@
+.env
+.vscode/*
+!.vscode/launch.json
+bin/
+*.log
+.DS_Store
