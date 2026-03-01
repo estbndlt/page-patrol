@@ -9,13 +9,15 @@ fi
 
 read_env_var() {
   local key=$1
-  local line
-  line=$(grep -E "^${key}=" "${PI_ENV_FILE}" | tail -n 1 || true)
-  if [[ -z "${line}" ]]; then
-    return 1
-  fi
+  env -i bash -c '
+    . "$1"
+    value=${!2-}
+    if [[ -z "${value}" ]]; then
+      exit 1
+    fi
 
-  printf '%s\n' "${line#*=}"
+    printf "%s\n" "${value}"
+  ' bash "${PI_ENV_FILE}" "${key}"
 }
 
 POSTGRES_DB=$(read_env_var POSTGRES_DB || true)
