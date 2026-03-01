@@ -74,7 +74,7 @@ func TestSecurityMiddlewareAllowsHTTPSAndSetsHeaders(t *testing.T) {
 	if got := rr.Header().Get("Referrer-Policy"); got != "strict-origin-when-cross-origin" {
 		t.Fatalf("unexpected Referrer-Policy header: %q", got)
 	}
-	if got := rr.Header().Get("Content-Security-Policy"); got != contentSecurityPolicy {
+	if got := rr.Header().Get("Content-Security-Policy"); got != s.contentSecurityPolicy() {
 		t.Fatalf("unexpected Content-Security-Policy header: %q", got)
 	}
 	if got := rr.Header().Get("Permissions-Policy"); got != permissionsPolicy {
@@ -197,5 +197,17 @@ func TestHandleRequestMagicLinkRedirectsWhenRateLimited(t *testing.T) {
 	}
 	if got := rr.Header().Get("Location"); got != "/login?sent=1" {
 		t.Fatalf("unexpected redirect location: %q", got)
+	}
+}
+
+func TestContentSecurityPolicyAllowsInlineWhenConfigured(t *testing.T) {
+	s := &Server{
+		cfg: config.Config{
+			CSPAllowUnsafeInline: true,
+		},
+	}
+
+	if got := s.contentSecurityPolicy(); !strings.Contains(got, "'unsafe-inline'") {
+		t.Fatalf("expected unsafe-inline in policy, got %q", got)
 	}
 }

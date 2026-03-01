@@ -19,10 +19,11 @@ type Config struct {
 	StaticDir        string
 	CoordinatorEmail string
 
-	CookieSecure      bool
-	TrustProxyHeaders bool
-	SessionTTL        time.Duration
-	MagicLinkTTL      time.Duration
+	CookieSecure         bool
+	TrustProxyHeaders    bool
+	CSPAllowUnsafeInline bool
+	SessionTTL           time.Duration
+	MagicLinkTTL         time.Duration
 
 	MagicLinkRateLimitWindow      time.Duration
 	MagicLinkRateLimitMaxPerIP    int
@@ -49,6 +50,7 @@ func Load() (Config, error) {
 		CoordinatorEmail:              normalizeEmail(os.Getenv("COORDINATOR_EMAIL")),
 		CookieSecure:                  getenvBool("COOKIE_SECURE", true),
 		TrustProxyHeaders:             getenvBool("TRUST_PROXY_HEADERS", false),
+		CSPAllowUnsafeInline:          getenvBool("CSP_ALLOW_UNSAFE_INLINE", false),
 		SessionTTL:                    getenvDuration("SESSION_TTL", 30*24*time.Hour),
 		MagicLinkTTL:                  getenvDuration("MAGIC_LINK_TTL", 15*time.Minute),
 		MagicLinkRateLimitWindow:      getenvDuration("MAGIC_LINK_RATE_LIMIT_WINDOW", 15*time.Minute),

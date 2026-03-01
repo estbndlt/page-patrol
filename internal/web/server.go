@@ -24,10 +24,9 @@ import (
 )
 
 const (
-	sessionCookieName     = "pp_session"
-	csrfCookieName        = "pp_csrf"
-	contentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
-	permissionsPolicy     = "accelerometer=(), autoplay=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), hid=(), microphone=(), payment=(), usb=()"
+	sessionCookieName = "pp_session"
+	csrfCookieName    = "pp_csrf"
+	permissionsPolicy = "accelerometer=(), autoplay=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), hid=(), microphone=(), payment=(), usb=()"
 )
 
 type Server struct {
@@ -165,7 +164,7 @@ func (s *Server) securityMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+		w.Header().Set("Content-Security-Policy", s.contentSecurityPolicy())
 		w.Header().Set("Permissions-Policy", permissionsPolicy)
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -1040,6 +1039,14 @@ func redirectURL(baseURL *url.URL, r *http.Request) string {
 func firstHeaderValue(value string) string {
 	first, _, _ := strings.Cut(value, ",")
 	return strings.TrimSpace(first)
+}
+
+func (s *Server) contentSecurityPolicy() string {
+	scriptSrc := "'self'"
+	if s.cfg.CSPAllowUnsafeInline {
+		scriptSrc += " 'unsafe-inline'"
+	}
+	return "default-src 'self'; script-src " + scriptSrc + "; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 }
 
 func forwardedDirectiveValue(value, directive string) string {

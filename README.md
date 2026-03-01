@@ -200,6 +200,7 @@ cat backup.sql | docker compose --env-file .env.prod -f docker-compose.yml -f do
 - Session cookie is `HttpOnly`, `SameSite=Lax`, and `Secure` when `COOKIE_SECURE=true`.
 - CSRF token is required for mutating POST routes.
 - Browser responses include CSP, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, and HSTS when `APP_BASE_URL` is HTTPS.
+- Set `CSP_ALLOW_UNSAFE_INLINE=true` only when an upstream service such as Cloudflare Bot Fight Mode injects inline JavaScript that must be allowed.
 - Magic-link requests are rate-limited in-process by IP and email with a resend cooldown.
 - `TRUST_PROXY_HEADERS=true` is required only when the app is behind a trusted proxy or Cloudflare Tunnel.
 

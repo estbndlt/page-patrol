@@ -3,13 +3,14 @@ set -euo pipefail
 
 SSH_ALLOW_CIDR=${SSH_ALLOW_CIDR:-}
 ALLOW_TCP_FORWARDING=${ALLOW_TCP_FORWARDING:-no}
+SKIP_FIREWALL=${SKIP_FIREWALL:-no}
 
 if [[ "${EUID}" -ne 0 ]]; then
   echo "Run this script with sudo on the Pi." >&2
   exit 1
 fi
 
-if [[ -z "${SSH_ALLOW_CIDR}" ]]; then
+if [[ "${SKIP_FIREWALL}" != "yes" && -z "${SSH_ALLOW_CIDR}" ]]; then
   echo "Set SSH_ALLOW_CIDR to the LAN or VPN CIDR that should be allowed to reach port 22." >&2
   exit 1
 fi
@@ -38,10 +39,12 @@ cat >/etc/fail2ban/jail.d/sshd.local <<'EOF'
 enabled = true
 EOF
 
-ufw default deny incoming
-ufw default allow outgoing
-ufw allow from "${SSH_ALLOW_CIDR}" to any port 22 proto tcp
-ufw --force enable
+if [[ "${SKIP_FIREWALL}" != "yes" ]]; then
+  ufw default deny incoming
+  ufw default allow outgoing
+  ufw allow from "${SSH_ALLOW_CIDR}" to any port 22 proto tcp
+  ufw --force enable
+fi
 
 systemctl enable --now unattended-upgrades
 systemctl enable --now fail2ban
