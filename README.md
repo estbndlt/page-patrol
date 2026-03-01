@@ -87,20 +87,27 @@ Production mode uses:
 2. Edit `$HOME/.config/page-patrol/env.pi` and update at least:
 - `APP_IMAGE`
 - `APP_TAG`
-- `TUNNEL_TOKEN`
 - `APP_BASE_URL`
 - `COORDINATOR_EMAIL`
 - Resend SMTP settings (`SMTP_*`)
 
-3. Deploy the pulled image tag on the Pi.
+3. If migrating an existing Pi install to the external env file, sync the running database role password first.
 
 ```bash
-./scripts/pi-deploy.sh
+SKIP_MANAGED_CLOUDFLARED=yes ./scripts/pi-sync-postgres-password.sh
+```
+
+4. Deploy the pulled image tag on the Pi.
+
+```bash
+SKIP_MANAGED_CLOUDFLARED=yes ./scripts/pi-deploy.sh
 ```
 
 Pi mode uses:
 - `docker-compose.yml` (shared services)
 - `docker-compose.pi.yml` (pulled images + host-network cloudflared)
+
+If you are keeping a legacy standalone `cloudflared` container temporarily, deploy with `SKIP_MANAGED_CLOUDFLARED=yes` until you are ready to migrate to token-based managed cloudflared.
 
 ## Coordinator Setup
 
@@ -115,6 +122,7 @@ Pi mode uses:
 - Stop local: `./scripts/local-down.sh`
 - Deploy production tag: `./scripts/prod-deploy.sh`
 - Initialize Pi env file: `./scripts/pi-init-env.sh`
+- Sync Pi Postgres password to the external env file: `./scripts/pi-sync-postgres-password.sh`
 - Deploy on Raspberry Pi: `./scripts/pi-deploy.sh`
 - Prune old Docker build cache on the Pi after secret rotation: `./scripts/pi-prune-builder-cache.sh`
 - Apply Pi host hardening (requires `sudo` and `SSH_ALLOW_CIDR`): `./scripts/pi-host-harden.sh`
