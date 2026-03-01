@@ -4,27 +4,49 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>{{.AppName}} | Login</title>
+  <script src="/static/theme.js"></script>
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
-  <main class="container narrow">
-    <h1>{{.AppName}}</h1>
-    <p>Passwordless sign-in for your book club team.</p>
+<body class="auth-page">
+  <main class="container login-layout page-shell">
+    <section class="login-copy">
+      <p class="eyebrow">Invite-Only Reading Rhythm</p>
+      <h1>{{.AppName}}</h1>
+      <p class="lede">A calm weekly dashboard for book-club teams to publish targets, mark progress, and keep the whole group in sync without password friction.</p>
 
-    {{if .Sent}}
-      <div class="notice success">If your email is allow-listed, a sign-in link has been sent.</div>
-    {{end}}
-    {{if .Error}}
-      <div class="notice error">{{.Error}}</div>
-    {{end}}
+      <ul class="trust-list">
+        <li><span><strong>Invite-only access.</strong> Only allow-listed team members can receive a magic link.</span></li>
+        <li><span><strong>Weekly targets.</strong> One clear reading goal stays front and center for every member.</span></li>
+        <li><span><strong>Live team feed.</strong> Activity updates appear automatically as the group checks in.</span></li>
+      </ul>
+    </section>
 
-    <form method="post" action="/auth/request-link" class="card">
-      <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-      <label for="email">Work email</label>
-      <input id="email" name="email" type="email" placeholder="you@company.com" required>
-      <button type="submit">Send magic link</button>
-    </form>
+    <section class="card auth-card">
+      <div class="card-header">
+        <p class="eyebrow">Sign In</p>
+        <h2>Open your reading dashboard</h2>
+        <p>Enter your work email and we’ll send a secure magic link if your address is on the allow list.</p>
+      </div>
+
+      {{if .Sent}}
+        <div class="notice success" role="status">If your email is allow-listed, a sign-in link has been sent.</div>
+      {{end}}
+      {{if .Error}}
+        <div class="notice error" id="email-error" role="alert">{{.Error}}</div>
+      {{end}}
+
+      <form method="post" action="/auth/request-link" class="stack">
+        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+        <div>
+          <label for="email">Work email</label>
+          <input id="email" name="email" type="email" placeholder="you@company.com" autocomplete="email" aria-describedby="email-help{{if .Error}} email-error{{end}}" required>
+          <p class="helper-text" id="email-help">Use the same email address your coordinator added to the club allow list.</p>
+        </div>
+        <button type="submit" class="button-block">Send magic link</button>
+      </form>
+    </section>
   </main>
 </body>
 </html>

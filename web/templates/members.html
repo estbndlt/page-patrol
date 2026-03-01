@@ -4,16 +4,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>{{.AppName}} | Allow List</title>
+  <script src="/static/theme.js"></script>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header class="topbar">
-    <div>
+    <div class="brand-lockup">
       <strong>{{.AppName}} Allow List</strong>
       <span class="muted">{{displayName .User.DisplayName .User.Email}}</span>
     </div>
     <nav class="topnav">
+      <button type="button" class="ghost-button theme-toggle" data-theme-cycle>Theme: Auto</button>
       <a href="/">Member view</a>
       <a href="/coordinator">Coordinator dashboard</a>
       <form method="post" action="/auth/logout">
@@ -23,37 +26,48 @@
     </nav>
   </header>
 
-  <main class="container grid">
-    <section class="card">
-      <h2>Add or Reactivate Member</h2>
+  <main class="container dashboard dashboard-members page-shell">
+    <section class="card card-secondary compact-form">
+      <div class="section-heading">
+        <p class="eyebrow">Membership</p>
+        <h2>Add or Reactivate Member</h2>
+        <p>Keep the invite-only roster current so the right people can receive magic links.</p>
+      </div>
       <form method="post" action="/coordinator/members" class="stack">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
-        <label for="email">Email</label>
-        <input id="email" name="email" type="email" required>
+        <div>
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" autocomplete="email" required>
+        </div>
 
-        <label for="display_name">Display name (optional)</label>
-        <input id="display_name" name="display_name">
+        <div>
+          <label for="display_name">Display name (optional)</label>
+          <input id="display_name" name="display_name" autocomplete="name">
+        </div>
 
-        <button type="submit">Save member</button>
+        <button type="submit" class="button-block">Save member</button>
       </form>
     </section>
 
-    <section class="card">
-      <h2>Current Allow List</h2>
-      <table>
+    <section class="card card-primary">
+      <div class="section-heading">
+        <p class="eyebrow">Roster</p>
+        <h2>Current Allow List</h2>
+      </div>
+      <table class="data-table responsive-table">
         <thead>
-          <tr><th>Email</th><th>Name</th><th>Status</th><th>Actions</th></tr>
+          <tr><th scope="col">Email</th><th scope="col">Name</th><th scope="col">Status</th><th scope="col">Actions</th></tr>
         </thead>
         <tbody>
           {{range .Invites}}
           <tr>
-            <td>{{.Email}}</td>
-            <td>{{if .DisplayName}}{{.DisplayName}}{{else}}-{{end}}</td>
-            <td>
+            <td data-label="Email">{{.Email}}</td>
+            <td data-label="Name">{{if .DisplayName}}{{.DisplayName}}{{else}}-{{end}}</td>
+            <td data-label="Status">
               <span class="pill {{if .Active}}ok{{else}}off{{end}}">{{if .Active}}ACTIVE{{else}}INACTIVE{{end}}</span>
             </td>
-            <td>
+            <td data-label="Actions" class="actions-cell">
               {{if .Active}}
               <form method="post" action="/coordinator/members/{{.ID}}/deactivate" class="inline-form">
                 <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">

@@ -4,16 +4,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>{{.AppName}} | Coordinator</title>
+  <script src="/static/theme.js"></script>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header class="topbar">
-    <div>
+    <div class="brand-lockup">
       <strong>{{.AppName}} Coordinator</strong>
       <span class="muted">{{displayName .User.DisplayName .User.Email}}</span>
     </div>
     <nav class="topnav">
+      <button type="button" class="ghost-button theme-toggle" data-theme-cycle>Theme: Auto</button>
       <a href="/">Member view</a>
       <a href="/coordinator/members">Allow list</a>
       <form method="post" action="/auth/logout">
@@ -23,87 +26,114 @@
     </nav>
   </header>
 
-  <main class="container grid">
-    <section class="card">
-      <h2>Publish Weekly Target</h2>
+  <main class="container dashboard dashboard-asymmetric page-shell">
+    <section class="card card-primary">
+      <div class="section-heading">
+        <p class="eyebrow">Coordinator Desk</p>
+        <h2>Publish Weekly Target</h2>
+        <p>Set the next reading assignment with one clear deadline and range for the full club.</p>
+      </div>
       <form method="post" action="/coordinator/targets" class="stack">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
 
-        <label for="book_title">Book title</label>
-        <input id="book_title" name="book_title" required>
-
-        <label for="progress_mode">Progress type</label>
-        <select id="progress_mode" name="progress_mode" required>
-          <option value="chapters">Chapters</option>
-          <option value="pages">Pages</option>
-        </select>
-
-        <div class="row">
+        <div class="form-cluster stack">
           <div>
-            <label for="progress_start">From</label>
-            <input id="progress_start" name="progress_start" type="number" min="0" required>
+            <label for="book_title">Book title</label>
+            <input id="book_title" name="book_title" required>
           </div>
           <div>
-            <label for="progress_end">To</label>
-            <input id="progress_end" name="progress_end" type="number" min="0" required>
+            <label for="progress_mode">Progress type</label>
+            <select id="progress_mode" name="progress_mode" required>
+              <option value="chapters">Chapters</option>
+              <option value="pages">Pages</option>
+            </select>
           </div>
         </div>
 
-        <label for="due_date">Due date</label>
-        <input id="due_date" name="due_date" type="date" required>
+        <div class="form-cluster stack">
+          <div class="split-fields">
+            <div>
+              <label for="progress_start">From</label>
+              <input id="progress_start" name="progress_start" type="number" min="0" required>
+            </div>
+            <div>
+              <label for="progress_end">To</label>
+              <input id="progress_end" name="progress_end" type="number" min="0" required>
+            </div>
+          </div>
+          <div>
+            <label for="due_date">Due date</label>
+            <input id="due_date" name="due_date" type="date" required>
+          </div>
+          <div>
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" rows="3" placeholder="Optional details"></textarea>
+          </div>
+        </div>
 
-        <label for="notes">Notes</label>
-        <textarea id="notes" name="notes" rows="3" placeholder="Optional details"></textarea>
-
-        <button type="submit">Publish target</button>
+        <button type="submit" class="button-block">Publish target</button>
       </form>
 
       {{if .Target}}
-      <hr>
-      <h3>Current Active Target</h3>
-      <p><strong>{{.Target.BookTitle}}</strong></p>
-      <p>{{.Target.ProgressMode}} {{.Target.ProgressStart}} to {{.Target.ProgressEnd}}</p>
-      <p>Due {{formatDate .Target.DueDate}}</p>
+      <div class="summary-card">
+        <p class="eyebrow">Current Active Target</p>
+        <h3>{{.Target.BookTitle}}</h3>
+        <div class="meta-row">
+          <span class="badge accent">Due {{formatDate .Target.DueDate}}</span>
+          <span class="badge neutral">{{.Target.ProgressMode}} {{.Target.ProgressStart}} to {{.Target.ProgressEnd}}</span>
+        </div>
+        {{if .Target.Notes}}<p class="muted">{{.Target.Notes}}</p>{{end}}
+      </div>
       {{end}}
     </section>
 
-    <section class="card">
-      <h2>Weekly Completion Trends</h2>
-      <table>
-        <thead>
-          <tr><th>Book</th><th>Due</th><th>Readers</th><th>Completion</th></tr>
-        </thead>
-        <tbody>
-          {{range .WeeklyTrends}}
-          <tr>
-            <td>{{.BookTitle}}</td>
-            <td>{{formatDate .DueDate}}</td>
-            <td>{{.Readers}} / {{.TotalMembers}}</td>
-            <td>{{formatPct .CompletionRate}}%</td>
-          </tr>
-          {{else}}
-          <tr><td colspan="4" class="muted">No archived weeks yet.</td></tr>
-          {{end}}
-        </tbody>
-      </table>
+    <div class="panel-stack">
+      <section class="card card-secondary">
+        <div class="section-heading">
+          <p class="eyebrow">Club Trends</p>
+          <h2>Weekly Completion Trends</h2>
+        </div>
+        <table class="data-table responsive-table">
+          <thead>
+            <tr><th scope="col">Book</th><th scope="col">Due</th><th scope="col">Readers</th><th scope="col">Completion</th></tr>
+          </thead>
+          <tbody>
+            {{range .WeeklyTrends}}
+            <tr>
+              <td data-label="Book">{{.BookTitle}}</td>
+              <td data-label="Due">{{formatDate .DueDate}}</td>
+              <td data-label="Readers">{{.Readers}} / {{.TotalMembers}}</td>
+              <td data-label="Completion">{{formatPct .CompletionRate}}%</td>
+            </tr>
+            {{else}}
+            <tr><td colspan="4" class="muted">No archived weeks yet.</td></tr>
+            {{end}}
+          </tbody>
+        </table>
+      </section>
 
-      <h2>Member Streaks</h2>
-      <table>
-        <thead>
-          <tr><th>Member</th><th>Streak</th></tr>
-        </thead>
-        <tbody>
-          {{range .MemberStreaks}}
-          <tr>
-            <td>{{displayName .DisplayName .Email}}</td>
-            <td>{{.Streak}}</td>
-          </tr>
-          {{else}}
-          <tr><td colspan="2" class="muted">No streak data yet.</td></tr>
-          {{end}}
-        </tbody>
-      </table>
-    </section>
+      <section class="card card-secondary">
+        <div class="section-heading">
+          <p class="eyebrow">Consistency</p>
+          <h2>Member Streaks</h2>
+        </div>
+        <table class="data-table responsive-table">
+          <thead>
+            <tr><th scope="col">Member</th><th scope="col">Streak</th></tr>
+          </thead>
+          <tbody>
+            {{range .MemberStreaks}}
+            <tr>
+              <td data-label="Member">{{displayName .DisplayName .Email}}</td>
+              <td data-label="Streak">{{.Streak}}</td>
+            </tr>
+            {{else}}
+            <tr><td colspan="2" class="muted">No streak data yet.</td></tr>
+            {{end}}
+          </tbody>
+        </table>
+      </section>
+    </div>
   </main>
 
   <footer class="footer">{{.AppName}} {{.NowYear}}</footer>

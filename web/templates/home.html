@@ -4,18 +4,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>{{.AppName}} | Dashboard</title>
+  <script src="/static/theme.js"></script>
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/htmx.min.js" defer></script>
   <script src="/static/home.js" defer></script>
 </head>
 <body>
   <header class="topbar">
-    <div>
+    <div class="brand-lockup">
       <strong>{{.AppName}}</strong>
       <span class="muted">Signed in as {{displayName .User.DisplayName .User.Email}}</span>
     </div>
     <nav class="topnav">
+      <button type="button" class="ghost-button theme-toggle" data-theme-cycle>Theme: Auto</button>
       {{if .IsCoord}}<a href="/coordinator">Coordinator</a>{{end}}
       <form method="post" action="/auth/logout">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
@@ -24,25 +27,37 @@
     </nav>
   </header>
 
-  <main class="container grid">
-    <section class="card">
-      <h2>Weekly Target</h2>
+  <main class="container dashboard dashboard-home page-shell">
+    <section class="card card-primary hero-panel">
+      <div class="section-heading">
+        <p class="eyebrow">This Week</p>
+        <h2>Weekly Target</h2>
+      </div>
       {{if .Target}}
-        <p><strong>{{.Target.BookTitle}}</strong></p>
-        <p>{{.Target.ProgressMode}} {{.Target.ProgressStart}} to {{.Target.ProgressEnd}}</p>
-        <p>Due {{formatDate .Target.DueDate}}</p>
-        {{if .Target.Notes}}<p class="muted">{{.Target.Notes}}</p>{{end}}
+        <div class="target-details">
+          <p class="target-title">{{.Target.BookTitle}}</p>
+          <div class="meta-row">
+            <span class="badge accent">Due {{formatDate .Target.DueDate}}</span>
+            <span class="badge neutral">{{.Target.ProgressMode}} {{.Target.ProgressStart}} to {{.Target.ProgressEnd}}</span>
+          </div>
+          {{if .Target.Notes}}<p class="muted">{{.Target.Notes}}</p>{{end}}
+        </div>
       {{else}}
         <p class="muted">No active reading target yet.</p>
       {{end}}
 
-      <div id="read-panel">
+      <div id="read-panel" class="read-panel">
         {{template "read_panel" .ReadPanel}}
       </div>
     </section>
 
-    <section class="card">
-      <h2>Activity Feed</h2>
+    <section class="card card-secondary">
+      <div class="section-heading">
+        <p class="eyebrow">Team Pulse</p>
+        <h2>Activity Feed</h2>
+        <p>Fresh updates appear automatically as members finish the week’s target.</p>
+      </div>
+      <p id="feed-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
       <div id="feed-shell" hx-get="/feed/fragment" hx-trigger="every 30s" hx-swap="innerHTML">
         {{template "feed_items" .Feed}}
       </div>
@@ -58,9 +73,15 @@
 {{if .HasTarget}}
   <form method="post" action="/status/toggle" hx-post="/status/toggle" hx-target="#read-panel" hx-swap="innerHTML" class="inline-form">
     <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-    <button type="submit">{{if .IsRead}}Mark unread{{else}}I read!{{end}}</button>
+    <button type="submit" aria-pressed="{{if .IsRead}}true{{else}}false{{end}}">{{if .IsRead}}Mark unread{{else}}I read!{{end}}</button>
   </form>
-  <p class="muted">{{.ReadCount}} of {{.MemberCount}} members marked read.</p>
+  <div class="progress-summary">
+    <strong>
+      <span>Group progress</span>
+      <span>{{.ReadCount}} of {{.MemberCount}} finished</span>
+    </strong>
+    <progress class="progress-bar" value="{{.ReadCount}}" max="{{if gt .MemberCount 0}}{{.MemberCount}}{{else}}1{{end}}" aria-label="Group progress">{{.ReadCount}} of {{.MemberCount}}</progress>
+  </div>
   <ul class="list">
     {{range .Members}}
       <li>
@@ -78,11 +99,11 @@
 <ul class="feed">
   {{range .}}
     <li>
-      <div>{{.Message}}</div>
+      <div class="feed-message">{{.Message}}</div>
       <small class="muted">{{.When}}</small>
     </li>
   {{else}}
-    <li><span class="muted">No activity yet.</span></li>
+    <li class="feed-empty"><span class="muted">No activity yet.</span></li>
   {{end}}
 </ul>
 {{end}}
