@@ -15,7 +15,7 @@ services:
 
   cloudflared:
     image: cloudflare/cloudflared:2026.2.0
-    command: ["tunnel", "--metrics", "127.0.0.1:20241", "--no-autoupdate", "run", "--token", "${TUNNEL_TOKEN}"]
+    command: ["tunnel", "--metrics", "127.0.0.1:20241", "--no-autoupdate", "run", "--url", "http://127.0.0.1:8080", "--token", "${TUNNEL_TOKEN}"]
     restart: unless-stopped
     network_mode: host
     depends_on:
