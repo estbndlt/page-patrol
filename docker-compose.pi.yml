@@ -1,0 +1,15 @@
+services:
+  web:
+    build:
+      context: .
+    env_file:
+      - .env.pi
+    ports:
+      - "127.0.0.1:8080:8080"
+
+  worker:
+    build:
+      context: .
+    command: ["/app/page-patrol-worker"]
+    env_file:
+      - .env.pi
