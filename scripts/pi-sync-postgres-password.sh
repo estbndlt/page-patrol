@@ -7,10 +7,20 @@ if [[ ! -f "${PI_ENV_FILE}" ]]; then
   exit 1
 fi
 
-# shellcheck disable=SC1090
-set -a
-. "${PI_ENV_FILE}"
-set +a
+read_env_var() {
+  local key=$1
+  local line
+  line=$(grep -E "^${key}=" "${PI_ENV_FILE}" | tail -n 1 || true)
+  if [[ -z "${line}" ]]; then
+    return 1
+  fi
+
+  printf '%s\n' "${line#*=}"
+}
+
+POSTGRES_DB=$(read_env_var POSTGRES_DB || true)
+POSTGRES_USER=$(read_env_var POSTGRES_USER || true)
+POSTGRES_PASSWORD=$(read_env_var POSTGRES_PASSWORD || true)
 
 if [[ -z "${POSTGRES_DB:-}" || -z "${POSTGRES_USER:-}" || -z "${POSTGRES_PASSWORD:-}" ]]; then
   echo "POSTGRES_DB, POSTGRES_USER, and POSTGRES_PASSWORD must be set in ${PI_ENV_FILE}." >&2
