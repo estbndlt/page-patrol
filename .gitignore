@@ -1,5 +1,6 @@
 .env
 .env.local
+.env.pi
 .env.prod
 .vscode/*
 !.vscode/launch.json

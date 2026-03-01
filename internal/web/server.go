@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -23,15 +24,18 @@ import (
 )
 
 const (
-	sessionCookieName = "pp_session"
-	csrfCookieName    = "pp_csrf"
+	sessionCookieName     = "pp_session"
+	csrfCookieName        = "pp_csrf"
+	contentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+	permissionsPolicy     = "accelerometer=(), autoplay=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), hid=(), microphone=(), payment=(), usb=()"
 )
 
 type Server struct {
-	cfg       config.Config
-	repo      *repository.Repository
-	logger    *log.Logger
-	templates *template.Template
+	cfg              config.Config
+	repo             *repository.Repository
+	logger           *log.Logger
+	templates        *template.Template
+	magicLinkLimiter *magicLinkRateLimiter
 }
 
 type loginPageData struct {
@@ -117,10 +121,11 @@ func NewServer(cfg config.Config, repo *repository.Repository, logger *log.Logge
 	}
 
 	return &Server{
-		cfg:       cfg,
-		repo:      repo,
-		logger:    logger,
-		templates: tpl,
+		cfg:              cfg,
+		repo:             repo,
+		logger:           logger,
+		templates:        tpl,
+		magicLinkLimiter: newMagicLinkRateLimiter(cfg),
 	}, nil
 }
 
@@ -155,11 +160,14 @@ func (s *Server) securityMiddleware(next http.Handler) http.Handler {
 	enforceHTTPS := err == nil && strings.EqualFold(baseURL.Scheme, "https")
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if enforceHTTPS && !requestIsSecure(r) {
+		if enforceHTTPS && !requestIsSecure(r, s.cfg.TrustProxyHeaders) {
 			http.Redirect(w, r, redirectURL(baseURL, r), http.StatusPermanentRedirect)
 			return
 		}
 
+		w.Header().Set("Content-Security-Policy", contentSecurityPolicy)
+		w.Header().Set("Permissions-Policy", permissionsPolicy)
+		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		if enforceHTTPS {
@@ -197,6 +205,17 @@ func (s *Server) handleRequestMagicLink(w http.ResponseWriter, r *http.Request) 
 	}
 
 	email := normalizeEmail(r.FormValue("email"))
+	clientIP := s.clientIP(r)
+	if decision := s.magicLinkLimiter.Allow(clientIP, email, time.Now()); !decision.Allowed {
+		s.logger.Printf(
+			"throttled magic link request reason=%s ip=%s email=%s",
+			decision.Reason,
+			redactIP(clientIP),
+			redactEmail(email),
+		)
+		http.Redirect(w, r, "/login?sent=1", http.StatusSeeOther)
+		return
+	}
 	if email != "" {
 		allowed, err := s.repo.IsEmailAllowed(r.Context(), email, s.cfg.CoordinatorEmail)
 		if err != nil {
@@ -963,9 +982,12 @@ func isHXRequest(r *http.Request) bool {
 	return strings.EqualFold(strings.TrimSpace(r.Header.Get("HX-Request")), "true")
 }
 
-func requestIsSecure(r *http.Request) bool {
+func requestIsSecure(r *http.Request, trustProxyHeaders bool) bool {
 	if r.TLS != nil {
 		return true
+	}
+	if !trustProxyHeaders {
+		return false
 	}
 
 	if proto := firstHeaderValue(r.Header.Get("X-Forwarded-Proto")); strings.EqualFold(proto, "https") {
@@ -976,14 +998,30 @@ func requestIsSecure(r *http.Request) bool {
 		return true
 	}
 
-	for _, part := range strings.Split(r.Header.Get("Forwarded"), ";") {
-		key, value, ok := strings.Cut(strings.TrimSpace(part), "=")
-		if ok && strings.EqualFold(key, "proto") && strings.EqualFold(strings.Trim(value, "\""), "https") {
-			return true
-		}
+	if strings.EqualFold(forwardedDirectiveValue(r.Header.Get("Forwarded"), "proto"), "https") {
+		return true
 	}
 
 	return false
+}
+
+func (s *Server) clientIP(r *http.Request) string {
+	if s.cfg.TrustProxyHeaders {
+		if ip := firstHeaderValue(r.Header.Get("CF-Connecting-IP")); ip != "" {
+			return ip
+		}
+		if ip := firstHeaderValue(r.Header.Get("X-Forwarded-For")); ip != "" {
+			return ip
+		}
+		if ip := forwardedDirectiveValue(r.Header.Get("Forwarded"), "for"); ip != "" {
+			return strings.Trim(ip, "\"[]")
+		}
+	}
+
+	if host, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr)); err == nil {
+		return host
+	}
+	return strings.TrimSpace(r.RemoteAddr)
 }
 
 func redirectURL(baseURL *url.URL, r *http.Request) string {
@@ -1002,6 +1040,18 @@ func redirectURL(baseURL *url.URL, r *http.Request) string {
 func firstHeaderValue(value string) string {
 	first, _, _ := strings.Cut(value, ",")
 	return strings.TrimSpace(first)
+}
+
+func forwardedDirectiveValue(value, directive string) string {
+	for _, element := range strings.Split(value, ",") {
+		for _, part := range strings.Split(element, ";") {
+			key, parsedValue, ok := strings.Cut(strings.TrimSpace(part), "=")
+			if ok && strings.EqualFold(key, directive) {
+				return strings.TrimSpace(parsedValue)
+			}
+		}
+	}
+	return ""
 }
 
 func (s *Server) logRequests(next http.Handler) http.Handler {

@@ -1,10 +1,12 @@
 FROM golang:1.24-alpine AS builder
 WORKDIR /src
 
-COPY go.mod ./
+COPY go.mod go.sum ./
 RUN go mod download
 
-COPY . .
+COPY cmd ./cmd
+COPY internal ./internal
+COPY web ./web
 ARG TARGETOS=linux
 ARG TARGETARCH=arm64
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /out/page-patrol-web ./cmd/web

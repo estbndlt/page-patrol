@@ -19,9 +19,15 @@ type Config struct {
 	StaticDir        string
 	CoordinatorEmail string
 
-	CookieSecure bool
-	SessionTTL   time.Duration
-	MagicLinkTTL time.Duration
+	CookieSecure      bool
+	TrustProxyHeaders bool
+	SessionTTL        time.Duration
+	MagicLinkTTL      time.Duration
+
+	MagicLinkRateLimitWindow      time.Duration
+	MagicLinkRateLimitMaxPerIP    int
+	MagicLinkRateLimitMaxPerEmail int
+	MagicLinkResendCooldown       time.Duration
 
 	SMTPHost      string
 	SMTPPort      int
@@ -33,23 +39,28 @@ type Config struct {
 
 func Load() (Config, error) {
 	cfg := Config{
-		AppName:          "Page Patrol",
-		AppBaseURL:       strings.TrimSpace(getenv("APP_BASE_URL", "http://localhost")),
-		ListenAddr:       strings.TrimSpace(getenv("APP_LISTEN_ADDR", ":8080")),
-		DatabaseURL:      strings.TrimSpace(os.Getenv("DATABASE_URL")),
-		MigrationsDir:    strings.TrimSpace(getenv("MIGRATIONS_DIR", "internal/db/migrations")),
-		TemplateDir:      strings.TrimSpace(getenv("TEMPLATE_DIR", "web/templates")),
-		StaticDir:        strings.TrimSpace(getenv("STATIC_DIR", "web/static")),
-		CoordinatorEmail: normalizeEmail(os.Getenv("COORDINATOR_EMAIL")),
-		CookieSecure:     getenvBool("COOKIE_SECURE", true),
-		SessionTTL:       getenvDuration("SESSION_TTL", 30*24*time.Hour),
-		MagicLinkTTL:     getenvDuration("MAGIC_LINK_TTL", 15*time.Minute),
-		SMTPHost:         strings.TrimSpace(os.Getenv("SMTP_HOST")),
-		SMTPPort:         getenvInt("SMTP_PORT", 587),
-		SMTPUser:         strings.TrimSpace(os.Getenv("SMTP_USER")),
-		SMTPPass:         strings.TrimSpace(os.Getenv("SMTP_PASS")),
-		SMTPFromName:     strings.TrimSpace(getenv("SMTP_FROM_NAME", "Page Patrol")),
-		SMTPFromEmail:    normalizeEmail(os.Getenv("SMTP_FROM_EMAIL")),
+		AppName:                       "Page Patrol",
+		AppBaseURL:                    strings.TrimSpace(getenv("APP_BASE_URL", "http://localhost")),
+		ListenAddr:                    strings.TrimSpace(getenv("APP_LISTEN_ADDR", ":8080")),
+		DatabaseURL:                   strings.TrimSpace(os.Getenv("DATABASE_URL")),
+		MigrationsDir:                 strings.TrimSpace(getenv("MIGRATIONS_DIR", "internal/db/migrations")),
+		TemplateDir:                   strings.TrimSpace(getenv("TEMPLATE_DIR", "web/templates")),
+		StaticDir:                     strings.TrimSpace(getenv("STATIC_DIR", "web/static")),
+		CoordinatorEmail:              normalizeEmail(os.Getenv("COORDINATOR_EMAIL")),
+		CookieSecure:                  getenvBool("COOKIE_SECURE", true),
+		TrustProxyHeaders:             getenvBool("TRUST_PROXY_HEADERS", false),
+		SessionTTL:                    getenvDuration("SESSION_TTL", 30*24*time.Hour),
+		MagicLinkTTL:                  getenvDuration("MAGIC_LINK_TTL", 15*time.Minute),
+		MagicLinkRateLimitWindow:      getenvDuration("MAGIC_LINK_RATE_LIMIT_WINDOW", 15*time.Minute),
+		MagicLinkRateLimitMaxPerIP:    getenvInt("MAGIC_LINK_RATE_LIMIT_MAX_PER_IP", 5),
+		MagicLinkRateLimitMaxPerEmail: getenvInt("MAGIC_LINK_RATE_LIMIT_MAX_PER_EMAIL", 3),
+		MagicLinkResendCooldown:       getenvDuration("MAGIC_LINK_RESEND_COOLDOWN", time.Minute),
+		SMTPHost:                      strings.TrimSpace(os.Getenv("SMTP_HOST")),
+		SMTPPort:                      getenvInt("SMTP_PORT", 587),
+		SMTPUser:                      strings.TrimSpace(os.Getenv("SMTP_USER")),
+		SMTPPass:                      strings.TrimSpace(os.Getenv("SMTP_PASS")),
+		SMTPFromName:                  strings.TrimSpace(getenv("SMTP_FROM_NAME", "Page Patrol")),
+		SMTPFromEmail:                 normalizeEmail(os.Getenv("SMTP_FROM_EMAIL")),
 	}
 
 	if cfg.DatabaseURL == "" {

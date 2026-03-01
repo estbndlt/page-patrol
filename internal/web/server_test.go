@@ -1,9 +1,14 @@
 package web
 
 import (
+	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
+	"time"
 
 	"page-patrol/internal/config"
 )
@@ -11,7 +16,8 @@ import (
 func TestSecurityMiddlewareRedirectsHTTPToHTTPS(t *testing.T) {
 	s := &Server{
 		cfg: config.Config{
-			AppBaseURL: "https://pagepatrol.estbndlt.com",
+			AppBaseURL:        "https://pagepatrol.estbndlt.com",
+			TrustProxyHeaders: true,
 		},
 	}
 
@@ -41,7 +47,8 @@ func TestSecurityMiddlewareRedirectsHTTPToHTTPS(t *testing.T) {
 func TestSecurityMiddlewareAllowsHTTPSAndSetsHeaders(t *testing.T) {
 	s := &Server{
 		cfg: config.Config{
-			AppBaseURL: "https://pagepatrol.estbndlt.com",
+			AppBaseURL:        "https://pagepatrol.estbndlt.com",
+			TrustProxyHeaders: true,
 		},
 	}
 
@@ -66,6 +73,15 @@ func TestSecurityMiddlewareAllowsHTTPSAndSetsHeaders(t *testing.T) {
 	}
 	if got := rr.Header().Get("Referrer-Policy"); got != "strict-origin-when-cross-origin" {
 		t.Fatalf("unexpected Referrer-Policy header: %q", got)
+	}
+	if got := rr.Header().Get("Content-Security-Policy"); got != contentSecurityPolicy {
+		t.Fatalf("unexpected Content-Security-Policy header: %q", got)
+	}
+	if got := rr.Header().Get("Permissions-Policy"); got != permissionsPolicy {
+		t.Fatalf("unexpected Permissions-Policy header: %q", got)
+	}
+	if got := rr.Header().Get("X-Frame-Options"); got != "DENY" {
+		t.Fatalf("unexpected X-Frame-Options header: %q", got)
 	}
 }
 
@@ -94,5 +110,92 @@ func TestSecurityMiddlewareDoesNotRedirectLocalHTTP(t *testing.T) {
 	}
 	if got := rr.Header().Get("Strict-Transport-Security"); got != "" {
 		t.Fatalf("expected no Strict-Transport-Security header for local HTTP, got %q", got)
+	}
+}
+
+func TestSecurityMiddlewareIgnoresForwardedHeadersWithoutProxyTrust(t *testing.T) {
+	s := &Server{
+		cfg: config.Config{
+			AppBaseURL: "https://pagepatrol.estbndlt.com",
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "http://pagepatrol.estbndlt.com/login", nil)
+	req.Header.Set("X-Forwarded-Proto", "https")
+
+	rr := httptest.NewRecorder()
+
+	handler := s.securityMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusPermanentRedirect {
+		t.Fatalf("expected status %d, got %d", http.StatusPermanentRedirect, rr.Code)
+	}
+}
+
+func TestClientIPUsesTrustedProxyHeaders(t *testing.T) {
+	s := &Server{
+		cfg: config.Config{
+			TrustProxyHeaders: true,
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "https://pagepatrol.estbndlt.com/login", nil)
+	req.RemoteAddr = "10.0.0.10:1234"
+	req.Header.Set("CF-Connecting-IP", "198.51.100.8")
+
+	if got := s.clientIP(req); got != "198.51.100.8" {
+		t.Fatalf("unexpected client IP: %q", got)
+	}
+}
+
+func TestClientIPFallsBackToRemoteAddr(t *testing.T) {
+	s := &Server{}
+
+	req := httptest.NewRequest(http.MethodGet, "https://pagepatrol.estbndlt.com/login", nil)
+	req.RemoteAddr = "198.51.100.9:4567"
+	req.Header.Set("CF-Connecting-IP", "203.0.113.10")
+
+	if got := s.clientIP(req); got != "198.51.100.9" {
+		t.Fatalf("unexpected client IP: %q", got)
+	}
+}
+
+func TestHandleRequestMagicLinkRedirectsWhenRateLimited(t *testing.T) {
+	limiter := newMagicLinkRateLimiter(config.Config{
+		MagicLinkRateLimitWindow:      time.Minute,
+		MagicLinkRateLimitMaxPerIP:    1,
+		MagicLinkRateLimitMaxPerEmail: 10,
+	})
+	now := time.Now()
+	if decision := limiter.Allow("198.51.100.20", "member@example.com", now); !decision.Allowed {
+		t.Fatalf("unexpected seed decision: %+v", decision)
+	}
+
+	s := &Server{
+		cfg:              config.Config{},
+		logger:           log.New(io.Discard, "", 0),
+		magicLinkLimiter: limiter,
+	}
+
+	form := url.Values{
+		"email":      {"member@example.com"},
+		"csrf_token": {"csrf-token"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/auth/request-link", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.RemoteAddr = "198.51.100.20:5555"
+	req.AddCookie(&http.Cookie{Name: csrfCookieName, Value: "csrf-token"})
+
+	rr := httptest.NewRecorder()
+	s.handleRequestMagicLink(rr, req)
+
+	if rr.Code != http.StatusSeeOther {
+		t.Fatalf("expected status %d, got %d", http.StatusSeeOther, rr.Code)
+	}
+	if got := rr.Header().Get("Location"); got != "/login?sent=1" {
+		t.Fatalf("unexpected redirect location: %q", got)
 	}
 }

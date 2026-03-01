@@ -14,7 +14,7 @@ Page Patrol is a lightweight team book-club tracker with passwordless magic-link
 
 ## Stack
 
-- Go + HTMX (server-rendered)
+- Go + self-hosted HTMX (server-rendered)
 - PostgreSQL
 - SMTP relay (Mailpit locally, Resend in production)
 - Docker Compose overlays for local and production
@@ -76,6 +76,32 @@ Production mode uses:
 - `docker-compose.yml` (shared services)
 - `docker-compose.prod.yml` (pulled images + cloudflared)
 
+### Raspberry Pi production mode
+
+1. Create the Pi env file outside the repo checkout.
+
+```bash
+./scripts/pi-init-env.sh
+```
+
+2. Edit `$HOME/.config/page-patrol/env.pi` and update at least:
+- `APP_IMAGE`
+- `APP_TAG`
+- `TUNNEL_TOKEN`
+- `APP_BASE_URL`
+- `COORDINATOR_EMAIL`
+- Resend SMTP settings (`SMTP_*`)
+
+3. Deploy the pulled image tag on the Pi.
+
+```bash
+./scripts/pi-deploy.sh
+```
+
+Pi mode uses:
+- `docker-compose.yml` (shared services)
+- `docker-compose.pi.yml` (pulled images + host-network cloudflared)
+
 ## Coordinator Setup
 
 - `COORDINATOR_EMAIL` becomes/keeps `coordinator` role on sign-in.
@@ -88,6 +114,10 @@ Production mode uses:
 - Start local: `./scripts/local-up.sh`
 - Stop local: `./scripts/local-down.sh`
 - Deploy production tag: `./scripts/prod-deploy.sh`
+- Initialize Pi env file: `./scripts/pi-init-env.sh`
+- Deploy on Raspberry Pi: `./scripts/pi-deploy.sh`
+- Prune old Docker build cache on the Pi after secret rotation: `./scripts/pi-prune-builder-cache.sh`
+- Apply Pi host hardening (requires `sudo` and `SSH_ALLOW_CIDR`): `./scripts/pi-host-harden.sh`
 - Run tests: `go test ./...`
 
 ## Easy Build/Release Flow
@@ -119,6 +149,7 @@ curl -fsS https://<your-domain>/healthz
 
 - `.env.local.example`: local defaults for localhost + Mailpit
 - `.env.prod.example`: production defaults for cloudflared + Resend SMTP
+- `.env.pi.example`: Pi production defaults for an external host env file
 - `.env.example`: pointer file showing which mode-specific env file to copy
 
 ## Backup and Restore
@@ -168,3 +199,11 @@ cat backup.sql | docker compose --env-file .env.prod -f docker-compose.yml -f do
 - Magic links expire (default 15 minutes) and are single-use.
 - Session cookie is `HttpOnly`, `SameSite=Lax`, and `Secure` when `COOKIE_SECURE=true`.
 - CSRF token is required for mutating POST routes.
+- Browser responses include CSP, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, and HSTS when `APP_BASE_URL` is HTTPS.
+- Magic-link requests are rate-limited in-process by IP and email with a resend cooldown.
+- `TRUST_PROXY_HEADERS=true` is required only when the app is behind a trusted proxy or Cloudflare Tunnel.
+
+## Cloudflare Follow-Up
+
+- Disable Cloudflare JavaScript challenge injection for the app hostname before enforcing the strict CSP in production.
+- Add a Cloudflare rate-limiting rule for `POST /auth/request-link` to match the in-app throttling.

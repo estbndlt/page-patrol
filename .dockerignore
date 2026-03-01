@@ -1,0 +1,12 @@
+.env
+.env.*
+!.env.example
+!.env.local.example
+!.env.pi.example
+!.env.prod.example
+.git
+.github
+.vscode
+bin
+*.log
+.DS_Store

@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{.AppName}} | Dashboard</title>
   <link rel="stylesheet" href="/static/style.css">
-  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/home.js" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -49,22 +50,6 @@
   </main>
 
   <footer class="footer">{{.AppName}} {{.NowYear}}</footer>
-
-  <script>
-    (function () {
-      if (!window.EventSource) return;
-      const feedShell = document.getElementById("feed-shell");
-      if (!feedShell) return;
-      const stream = new EventSource("/feed/events");
-      stream.addEventListener("activity", function () {
-        if (window.htmx) {
-          window.htmx.ajax("GET", "/feed/fragment", {target: "#feed-shell", swap: "innerHTML"});
-        }
-      });
-      stream.onerror = function () {
-      };
-    })();
-  </script>
 </body>
 </html>
 {{end}}
