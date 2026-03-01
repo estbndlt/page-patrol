@@ -147,7 +147,27 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /coordinator/members/{id}/reactivate", s.requireCoordinator(s.handleReactivateMember))
 	mux.HandleFunc("GET /coordinator/trends", s.requireCoordinator(s.handleTrendsAPI))
 
-	return s.logRequests(mux)
+	return s.logRequests(s.securityMiddleware(mux))
+}
+
+func (s *Server) securityMiddleware(next http.Handler) http.Handler {
+	baseURL, err := url.Parse(strings.TrimSpace(s.cfg.AppBaseURL))
+	enforceHTTPS := err == nil && strings.EqualFold(baseURL.Scheme, "https")
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if enforceHTTPS && !requestIsSecure(r) {
+			http.Redirect(w, r, redirectURL(baseURL, r), http.StatusPermanentRedirect)
+			return
+		}
+
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		if enforceHTTPS {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
@@ -941,6 +961,47 @@ func (s *Server) eventMessage(event models.ActivityEvent) string {
 
 func isHXRequest(r *http.Request) bool {
 	return strings.EqualFold(strings.TrimSpace(r.Header.Get("HX-Request")), "true")
+}
+
+func requestIsSecure(r *http.Request) bool {
+	if r.TLS != nil {
+		return true
+	}
+
+	if proto := firstHeaderValue(r.Header.Get("X-Forwarded-Proto")); strings.EqualFold(proto, "https") {
+		return true
+	}
+
+	if strings.Contains(strings.ToLower(strings.ReplaceAll(r.Header.Get("CF-Visitor"), " ", "")), "\"scheme\":\"https\"") {
+		return true
+	}
+
+	for _, part := range strings.Split(r.Header.Get("Forwarded"), ";") {
+		key, value, ok := strings.Cut(strings.TrimSpace(part), "=")
+		if ok && strings.EqualFold(key, "proto") && strings.EqualFold(strings.Trim(value, "\""), "https") {
+			return true
+		}
+	}
+
+	return false
+}
+
+func redirectURL(baseURL *url.URL, r *http.Request) string {
+	target := &url.URL{
+		Scheme:   "https",
+		Host:     r.Host,
+		Path:     r.URL.Path,
+		RawQuery: r.URL.RawQuery,
+	}
+	if baseURL != nil && baseURL.Host != "" {
+		target.Host = baseURL.Host
+	}
+	return target.String()
+}
+
+func firstHeaderValue(value string) string {
+	first, _, _ := strings.Cut(value, ",")
+	return strings.TrimSpace(first)
 }
 
 func (s *Server) logRequests(next http.Handler) http.Handler {
