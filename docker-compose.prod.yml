@@ -1,0 +1,19 @@
+services:
+  web:
+    image: ${APP_IMAGE}:${APP_TAG}
+    pull_policy: always
+    env_file:
+      - .env.prod
+
+  worker:
+    image: ${APP_IMAGE}:${APP_TAG}
+    pull_policy: always
+    env_file:
+      - .env.prod
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: ["tunnel", "--no-autoupdate", "run", "--token", "${TUNNEL_TOKEN}"]
+    restart: unless-stopped
+    depends_on:
+      - web

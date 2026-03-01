@@ -1,4 +1,6 @@
 .env
+.env.local
+.env.prod
 .vscode/*
 !.vscode/launch.json
 bin/
