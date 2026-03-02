@@ -1,0 +1,20 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Page Patrol social preview card</title>
+  <desc id="desc">A preview card for the Page Patrol weekly reading dashboard.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#111827"/>
+      <stop offset="1" stop-color="#1F2937"/>
+    </linearGradient>
+    <linearGradient id="pill" x1="240" y1="320" x2="960" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#38BDF8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="80" y="80" width="1040" height="470" rx="32" fill="#0B1220" stroke="#334155" stroke-width="2"/>
+  <text x="140" y="210" fill="#E2E8F0" font-size="36" font-family="Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif" letter-spacing="0.06em">INVITE-ONLY READING RHYTHM</text>
+  <text x="140" y="315" fill="#F8FAFC" font-size="92" font-weight="700" font-family="Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif">Page Patrol</text>
+  <rect x="140" y="360" width="720" height="20" rx="10" fill="url(#pill)"/>
+  <text x="140" y="445" fill="#94A3B8" font-size="40" font-family="Inter, Segoe UI, Roboto, Helvetica, Arial, sans-serif">Weekly targets · Team check-ins · Live feed</text>
+</svg>

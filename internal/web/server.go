@@ -99,6 +99,22 @@ type membersPageData struct {
 
 func NewServer(cfg config.Config, repo *repository.Repository, logger *log.Logger) (*Server, error) {
 	tpl, err := template.New("root").Funcs(template.FuncMap{
+		"absURL": func(path string) string {
+			base := strings.TrimRight(cfg.AppBaseURL, "/")
+			if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+				return path
+			}
+			if base == "" {
+				return path
+			}
+			if path == "" {
+				return base
+			}
+			if strings.HasPrefix(path, "/") {
+				return base + path
+			}
+			return base + "/" + path
+		},
 		"formatDate": func(t time.Time) string {
 			if t.IsZero() {
 				return ""
