@@ -38,11 +38,14 @@ type Server struct {
 }
 
 type loginPageData struct {
-	AppName    string
-	CSRFToken  string
-	Sent       bool
-	Error      string
-	LoginEmail string
+	AppName           string
+	CSRFToken         string
+	Sent              bool
+	Error             string
+	LoginEmail        string
+	MetaDescription   string
+	CanonicalURL      string
+	OpenGraphImageURL string
 }
 
 type homePageData struct {
@@ -184,11 +187,15 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 
 func (s *Server) handleLoginPage(w http.ResponseWriter, r *http.Request) {
 	csrf := s.ensureCSRFToken(w, r)
+	baseURL := strings.TrimRight(strings.TrimSpace(s.cfg.AppBaseURL), "/")
 	data := loginPageData{
-		AppName:   s.cfg.AppName,
-		CSRFToken: csrf,
-		Sent:      r.URL.Query().Get("sent") == "1",
-		Error:     strings.TrimSpace(r.URL.Query().Get("error")),
+		AppName:           s.cfg.AppName,
+		CSRFToken:         csrf,
+		Sent:              r.URL.Query().Get("sent") == "1",
+		Error:             strings.TrimSpace(r.URL.Query().Get("error")),
+		MetaDescription:   "Invite-only reading dashboard for book-club teams.",
+		CanonicalURL:      baseURL + "/login",
+		OpenGraphImageURL: baseURL + "/static/og-login-card.svg",
 	}
 	s.render(w, "login", data)
 }

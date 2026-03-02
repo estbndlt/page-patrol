@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Page Patrol Login Preview</title>
+  <desc id="desc">Page Patrol invite-only reading dashboard login screen preview card.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#131a2c"/>
+      <stop offset="100%" stop-color="#2a3f79"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="80" y="80" width="1040" height="470" rx="34" fill="#f4f6ff"/>
+  <rect x="125" y="130" width="950" height="22" rx="11" fill="#5f79ff" opacity="0.95"/>
+  <text x="140" y="280" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="88" font-weight="700" fill="#18203a">Page Patrol</text>
+  <text x="140" y="355" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="42" fill="#47506d">Invite-only reading dashboard</text>
+  <text x="140" y="415" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="38" fill="#47506d">Magic-link access • Weekly targets • Team feed</text>
+  <text x="140" y="505" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" fill="#6a7392">pagepatrol.estbndlt.com</text>
+</svg>

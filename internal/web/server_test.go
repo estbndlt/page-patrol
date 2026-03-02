@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -209,5 +210,38 @@ func TestContentSecurityPolicyAllowsInlineWhenConfigured(t *testing.T) {
 
 	if got := s.contentSecurityPolicy(); !strings.Contains(got, "'unsafe-inline'") {
 		t.Fatalf("expected unsafe-inline in policy, got %q", got)
+	}
+}
+
+func TestHandleLoginPageIncludesShareMetaTags(t *testing.T) {
+	s, err := NewServer(config.Config{
+		AppName:     "Page Patrol",
+		AppBaseURL:  "https://pagepatrol.estbndlt.com",
+		TemplateDir: filepath.Join("..", "..", "web", "templates"),
+		StaticDir:   filepath.Join("..", "..", "web", "static"),
+	}, nil, log.New(io.Discard, "", 0))
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "https://pagepatrol.estbndlt.com/login", nil)
+	rr := httptest.NewRecorder()
+
+	s.handleLoginPage(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, rr.Code)
+	}
+	body := rr.Body.String()
+	checks := []string{
+		`<meta property="og:title" content="Page Patrol | Login">`,
+		`<meta property="og:url" content="https://pagepatrol.estbndlt.com/login">`,
+		`<meta property="og:image" content="https://pagepatrol.estbndlt.com/static/og-login-card.svg">`,
+		`<meta name="twitter:card" content="summary_large_image">`,
+	}
+	for _, check := range checks {
+		if !strings.Contains(body, check) {
+			t.Fatalf("expected response body to include %q", check)
+		}
 	}
 }
